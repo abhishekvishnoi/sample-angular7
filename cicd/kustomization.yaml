@@ -6,6 +6,7 @@ namespace: sample-angular7
 resources:
   - manifests/namespace.yaml
   - manifests/imagestream.yaml
+  - manifests/imagestream-node-build.yaml
   - manifests/deployment.yaml
   - manifests/service.yaml
   - manifests/route.yaml

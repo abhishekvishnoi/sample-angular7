@@ -1,42 +1,39 @@
-apiVersion: apps/v1
 kind: Deployment
+apiVersion: apps/v1
 metadata:
-  name: sample-angular7
-  labels:
-    app: sample-angular7
-    app.kubernetes.io/part-of: sample-angular7
+  name: angular7-app
+  namespace: angular-sample-app
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: sample-angular7
+      app: angular7-app
   template:
     metadata:
       labels:
-        app: sample-angular7
+        app: angular7-app
     spec:
       containers:
-        - name: sample-angular7
-          image: image-registry.openshift-image-registry.svc:5000/sample-angular7/sample-angular7:latest
+        - name: container
+          image: 'image-registry.openshift-image-registry.svc:5000/angular-sample-app/angular7-app'
           ports:
-            - containerPort: 80
+            - containerPort: 8080
               protocol: TCP
-          resources:
-            requests:
-              cpu: 50m
-              memory: 64Mi
-            limits:
-              cpu: 200m
-              memory: 128Mi
-          readinessProbe:
-            httpGet:
-              path: /
-              port: 80
-            initialDelaySeconds: 5
-            periodSeconds: 10
-          livenessProbe:
-            httpGet:
-              path: /
-              port: 80
-            initialDelaySeconds: 15
-            periodSeconds: 20
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          imagePullPolicy: Always
+          securityContext:
+            runAsUser: 0
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30
+      dnsPolicy: ClusterFirst
+      securityContext: {}
+      schedulerName: default-scheduler
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 25%
+      maxSurge: 25%
+  revisionHistoryLimit: 10
+  progressDeadlineSeconds: 600

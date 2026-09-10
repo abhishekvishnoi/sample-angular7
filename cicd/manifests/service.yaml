@@ -7,7 +7,7 @@ metadata:
     app.kubernetes.io/part-of: sample-angular7
 spec:
   selector:
-    app: sample-angular7
+    app: angular7-app
   ports:
     - name: http
       port: 80

@@ -1,0 +1,55 @@
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: npm-build
+  namespace: angular-sample-app
+spec:
+  description: |-
+
+    This task can be used to run npm goals on a project.
+
+    This task can be used to run npm goals on a project where package.json is present and has some pre-defined npm scripts.
+  params:
+    - default: .
+      description: The path where package.json of the project is defined.
+      name: PATH_CONTEXT
+      type: string
+    - default:
+        - version
+      description: The npm goals you want to run.
+      name: ARGS
+      type: array
+    - default: 'registry.redhat.io/ubi9/nodejs-20@sha256:71a3810707370f30bc0958aea14c3a5af564a3962ae0819bf16fdde7df9b4378'
+      description: The node image you want to use.
+      name: IMAGE
+      type: string
+    - default: ''
+      description: script to be executed for dist folder
+      name: dist_name
+      type: string
+  steps:
+    - args:
+        - $(params.ARGS)
+      command:
+        - npm
+      computeResources: {}
+      image: $(params.IMAGE)
+      name: npm-version-details
+      workingDir: $(workspaces.source.path)/$(params.PATH_CONTEXT)
+    - args:
+        - install
+      command:
+        - npm
+      computeResources: {}
+      image: $(params.IMAGE)
+      name: npm-install
+      workingDir: $(workspaces.source.path)/$(params.PATH_CONTEXT)
+    - computeResources: {}
+      image: $(params.IMAGE)
+      name: npm-build
+      script: |
+
+        npm run $(params.dist_name)
+      workingDir: $(workspaces.source.path)/$(params.PATH_CONTEXT)
+  workspaces:
+    - name: source

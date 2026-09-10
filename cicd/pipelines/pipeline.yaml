@@ -1,96 +1,115 @@
-apiVersion: tekton.dev/v1beta1
+apiVersion: tekton.dev/v1
 kind: Pipeline
 metadata:
-  name: sample-angular7-pipeline
-  labels:
-    app.kubernetes.io/part-of: sample-angular7
+  name: angular7-pipeline1
+  namespace: angular-sample-app
 spec:
-  description: Clone, ng build, containerize, and deploy sample-angular7 to OpenShift
-  params:
-    - name: git-url
-      description: Git repository URL
-      type: string
-    - name: git-revision
-      description: Git branch, tag, or commit
-      type: string
-      default: main
-    - name: image-name
-      description: Image name (without registry prefix)
-      type: string
-      default: sample-angular7
-    - name: image-tag
-      description: Image tag
-      type: string
-      default: latest
-    - name: namespace
-      description: Target OpenShift namespace
-      type: string
-      default: sample-angular7
-    - name: app-name
-      description: Application deployment name
-      type: string
-      default: sample-angular7
-    - name: tls-verify
-      description: TLS verification for registry push
-      type: string
-      default: "true"
-  workspaces:
-    - name: shared-workspace
-      description: Shared workspace for source code and manifests
   tasks:
-    - name: fetch-source
-      taskRef:
-        name: git-clone
+    - name: git-clone-1-23-0
       params:
-        - name: url
-          value: $(params.git-url)
-        - name: revision
-          value: $(params.git-revision)
+        - name: CRT_FILENAME
+          value: ca-bundle.crt
+        - name: HTTP_PROXY
+          value: ''
+        - name: HTTPS_PROXY
+          value: ''
+        - name: NO_PROXY
+          value: ''
+        - name: SUBDIRECTORY
+          value: ''
+        - name: USER_HOME
+          value: /home/git
+        - name: DELETE_EXISTING
+          value: 'true'
+        - name: VERBOSE
+          value: 'false'
+        - name: SSL_VERIFY
+          value: 'true'
+        - name: URL
+          value: https://github.com/abhishekvishnoi/sample-angular7.git
+        - name: REVISION
+          value: main
+        - name: REFSPEC
+          value: ''
+        - name: SUBMODULES
+          value: 'true'
+        - name: DEPTH
+          value: '1'
+        - name: SPARSE_CHECKOUT_DIRECTORIES
+          value: ''
+      taskRef:
+        params:
+          - name: kind
+            value: task
+          - name: name
+            value: git-clone-1-23-0
+          - name: namespace
+            value: openshift-pipelines
+        resolver: cluster
       workspaces:
         - name: output
-          workspace: shared-workspace
-
-    - name: ng-build
-      runAfter:
-        - fetch-source
-      taskRef:
-        name: ng-build
-      workspaces:
-        - name: source
-          workspace: shared-workspace
-
-    - name: build-image
-      runAfter:
-        - ng-build
-      taskRef:
-        name: buildah-build-push
+          workspace: my-workspace
+    - name: buildah-1-23-0
       params:
         - name: IMAGE
-          value: image-registry.openshift-image-registry.svc:5000/$(params.namespace)/$(params.image-name):$(params.image-tag)
+          value: >-
+            image-registry.openshift-image-registry.svc:5000/angular-sample-app/angular7-app:latest
         - name: DOCKERFILE
-          value: Containerfile
+          value: ./Containerfile
+        - name: BUILD_ARGS
+          value: []
         - name: CONTEXT
           value: .
-        - name: TLSVERIFY
-          value: $(params.tls-verify)
-      workspaces:
-        - name: source
-          workspace: shared-workspace
-
-    - name: deploy
+        - name: STORAGE_DRIVER
+          value: vfs
+        - name: FORMAT
+          value: oci
+        - name: BUILD_EXTRA_ARGS
+          value: ''
+        - name: PUSH_EXTRA_ARGS
+          value: ''
+        - name: SKIP_PUSH
+          value: 'false'
+        - name: TLS_VERIFY
+          value: 'true'
+        - name: VERBOSE
+          value: 'false'
       runAfter:
-        - build-image
+        - npm-build
       taskRef:
-        name: deploy-openshift
-      params:
-        - name: NAMESPACE
-          value: $(params.namespace)
-        - name: IMAGE
-          value: image-registry.openshift-image-registry.svc:5000/$(params.namespace)/$(params.image-name):$(params.image-tag)
-        - name: APP_NAME
-          value: $(params.app-name)
-        - name: MANIFESTS_DIR
-          value: cicd/manifests
+        params:
+          - name: kind
+            value: task
+          - name: name
+            value: buildah-1-23-0
+          - name: namespace
+            value: openshift-pipelines
+        resolver: cluster
       workspaces:
         - name: source
-          workspace: shared-workspace
+          workspace: my-workspace
+    - name: npm-build
+      params:
+        - name: PATH_CONTEXT
+          value: .
+        - name: ARGS
+          value:
+            - version
+        - name: IMAGE
+          value: >-
+            registry.redhat.io/ubi9/nodejs-20@sha256:71a3810707370f30bc0958aea14c3a5af564a3962ae0819bf16fdde7df9b4378
+        - name: dist_name
+          value: build
+      runAfter:
+        - git-clone-1-23-0
+      taskRef:
+        kind: Task
+        name: npm-build
+      workspaces:
+        - name: source
+          workspace: my-workspace
+  workspaces:
+    - name: my-workspace
+      optional: false
+  params: []
+  finally: []

@@ -5,7 +5,7 @@ metadata:
   labels:
     app.kubernetes.io/part-of: sample-angular7
 spec:
-  description: Clone, build, and deploy sample-angular7 to OpenShift
+  description: Clone, ng build, containerize, and deploy sample-angular7 to OpenShift
   params:
     - name: git-url
       description: Git repository URL
@@ -50,9 +50,18 @@ spec:
         - name: output
           workspace: shared-workspace
 
-    - name: build-image
+    - name: ng-build
       runAfter:
         - fetch-source
+      taskRef:
+        name: ng-build
+      workspaces:
+        - name: source
+          workspace: shared-workspace
+
+    - name: build-image
+      runAfter:
+        - ng-build
       taskRef:
         name: buildah-build-push
       params:

@@ -11,6 +11,7 @@ resources:
   - manifests/route.yaml
   - rbac/pipeline-sa.yaml
   - tasks/git-clone-task.yaml
+  - tasks/ng-build-task.yaml
   - tasks/buildah-task.yaml
   - tasks/deploy-openshift-task.yaml
   - pipelines/pipeline.yaml

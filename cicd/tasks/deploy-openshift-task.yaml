@@ -1,0 +1,52 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: deploy-openshift
+  labels:
+    app.kubernetes.io/part-of: sample-angular7
+spec:
+  description: Deploy or update the application on OpenShift
+  params:
+    - name: NAMESPACE
+      description: Target OpenShift namespace
+      type: string
+    - name: IMAGE
+      description: Container image to deploy
+      type: string
+    - name: APP_NAME
+      description: Application name used for deployment resources
+      type: string
+      default: sample-angular7
+    - name: MANIFESTS_DIR
+      description: Directory containing Kubernetes/OpenShift manifests
+      type: string
+      default: cicd/manifests
+  workspaces:
+    - name: source
+      description: Workspace containing manifest files
+  steps:
+    - name: apply-manifests
+      image: registry.redhat.io/openshift4/ose-cli:4.14
+      workingDir: $(workspaces.source.path)
+      script: |
+        #!/usr/bin/env bash
+        set -euo pipefail
+
+        oc project "$(params.NAMESPACE)"
+
+        # Apply application manifests (skip namespace — must exist before pipeline run)
+        for manifest in deployment.yaml service.yaml route.yaml imagestream.yaml; do
+          oc apply -f "$(params.MANIFESTS_DIR)/${manifest}" -n "$(params.NAMESPACE)"
+        done
+
+        # Update deployment with the newly built image
+        oc set image "deployment/$(params.APP_NAME)" \
+          "$(params.APP_NAME)=$(params.IMAGE)" \
+          -n "$(params.NAMESPACE)"
+
+        oc rollout status "deployment/$(params.APP_NAME)" \
+          -n "$(params.NAMESPACE)" \
+          --timeout=5m
+
+        echo "Deployment successful"
+        oc get route "$(params.APP_NAME)" -n "$(params.NAMESPACE)" -o jsonpath='{.spec.host}{"\n"}' || true

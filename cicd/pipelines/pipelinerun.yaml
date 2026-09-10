@@ -1,0 +1,36 @@
+apiVersion: tekton.dev/v1beta1
+kind: PipelineRun
+metadata:
+  name: sample-angular7-pipelinerun
+  labels:
+    app.kubernetes.io/part-of: sample-angular7
+spec:
+  pipelineRef:
+    name: sample-angular7-pipeline
+  serviceAccountName: pipeline
+  params:
+    - name: git-url
+      value: https://github.com/YOUR_ORG/sample-angular7.git
+    - name: git-revision
+      value: main
+    - name: image-name
+      value: sample-angular7
+    - name: image-tag
+      value: latest
+    - name: namespace
+      value: sample-angular7
+    - name: app-name
+      value: sample-angular7
+    - name: tls-verify
+      value: "false"
+  workspaces:
+    - name: shared-workspace
+      volumeClaimTemplate:
+        spec:
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: 1Gi
+  timeouts:
+    pipeline: 1h

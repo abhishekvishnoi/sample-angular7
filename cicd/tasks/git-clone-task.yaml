@@ -1,0 +1,43 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: git-clone
+  labels:
+    app.kubernetes.io/part-of: sample-angular7
+spec:
+  description: Clone a git repository into the workspace
+  params:
+    - name: url
+      description: Repository URL to clone
+      type: string
+    - name: revision
+      description: Git revision to checkout (branch, tag, or commit)
+      type: string
+      default: main
+    - name: subdirectory
+      description: Subdirectory inside the workspace to clone into
+      type: string
+      default: ""
+  workspaces:
+    - name: output
+      description: Workspace to clone the repository into
+  steps:
+    - name: clone
+      image: alpine/git:2.43.0
+      script: |
+        #!/usr/bin/env sh
+        set -eu
+
+        DEST="$(workspaces.output.path)"
+        if [ -n "$(params.subdirectory)" ]; then
+          DEST="${DEST}/$(params.subdirectory)"
+        fi
+
+        git clone "$(params.url)" "${DEST}"
+        cd "${DEST}"
+        git checkout "$(params.revision)"
+        git rev-parse HEAD > /tekton/results/commit
+
+  results:
+    - name: commit
+      description: Checked-out commit SHA

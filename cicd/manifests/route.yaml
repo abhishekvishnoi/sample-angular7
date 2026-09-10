@@ -1,0 +1,17 @@
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: sample-angular7
+  labels:
+    app: sample-angular7
+    app.kubernetes.io/part-of: sample-angular7
+spec:
+  to:
+    kind: Service
+    name: sample-angular7
+    weight: 100
+  port:
+    targetPort: http
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect

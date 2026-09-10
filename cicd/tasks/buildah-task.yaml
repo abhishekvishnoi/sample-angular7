@@ -1,0 +1,76 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: buildah-build-push
+  labels:
+    app.kubernetes.io/part-of: sample-angular7
+spec:
+  description: Build a container image with buildah and push to a registry
+  params:
+    - name: IMAGE
+      description: Fully qualified image name (including tag) to build and push
+      type: string
+    - name: DOCKERFILE
+      description: Path to the Dockerfile or Containerfile relative to the source root
+      type: string
+      default: Containerfile
+    - name: CONTEXT
+      description: Build context directory relative to the workspace
+      type: string
+      default: .
+    - name: TLSVERIFY
+      description: Verify TLS when pushing to the registry
+      type: string
+      default: "true"
+  workspaces:
+    - name: source
+      description: Workspace containing the source code and Containerfile
+  volumes:
+    - name: varlibcontainers
+      emptyDir: {}
+  steps:
+    - name: prepare-docker-config
+      image: registry.redhat.io/ubi9/ubi-minimal:9.4
+      script: |
+        #!/usr/bin/env bash
+        set -euo pipefail
+        mkdir -p /tekton/home/.docker
+        if [ -f /tekton-creds/.dockercfg ]; then
+          cp /tekton-creds/.dockercfg /tekton/home/.docker/config.json
+        elif [ -f /tekton-creds/.dockerconfigjson ]; then
+          cp /tekton-creds/.dockerconfigjson /tekton/home/.docker/config.json
+        fi
+
+    - name: build-and-push
+      image: quay.io/buildah/stable:v1.33
+      workingDir: $(workspaces.source.path)/$(params.CONTEXT)
+      securityContext:
+        capabilities:
+          add:
+            - SETFCAP
+      volumeMounts:
+        - name: varlibcontainers
+          mountPath: /var/lib/containers
+      env:
+        - name: STORAGE_DRIVER
+          value: vfs
+        - name: HOME
+          value: /tekton/home
+      script: |
+        #!/usr/bin/env bash
+        set -euo pipefail
+
+        buildah bud \
+          --storage-driver=vfs \
+          -f "$(params.DOCKERFILE)" \
+          -t "$(params.IMAGE)" \
+          .
+
+        buildah push \
+          --storage-driver=vfs \
+          --tls-verify="$(params.TLSVERIFY)" \
+          "$(params.IMAGE)"
+
+  results:
+    - name: IMAGE_DIGEST
+      description: Digest of the pushed image

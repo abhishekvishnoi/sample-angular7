@@ -1,0 +1,48 @@
+# RHEL 7 UBI build image with Node.js 10.15 for OpenShift / Tekton ng-build (x86_64)
+# Use UBI (not rhel7) — UBI repos work without a Red Hat subscription during image build
+FROM --platform=linux/amd64 registry.access.redhat.com/ubi7/ubi:7.9
+
+ARG TARGETARCH=amd64
+
+LABEL maintainer="sample-angular7" \
+      description="RHEL 7 UBI image with Node.js 10.15 for Angular 7 builds (x86_64)" \
+      io.k8s.display-name="Node 10.15 on UBI7 x86_64" \
+      architecture="amd64" \
+      io.openshift.tags="x86_64,amd64"
+
+ENV NODE_VERSION=10.15.3 \
+    NPM_CONFIG_LOGLEVEL=warn \
+    PATH=/usr/local/bin:$PATH
+
+# Build tools required for npm ci and optional native modules (e.g. node-sass)
+RUN yum install -y --setopt=tsflags=nodocs \
+      curl \
+      tar \
+      xz \
+      gcc \
+      gcc-c++ \
+      make \
+      python \
+     # git \
+    && yum clean all \
+    && rm -rf /var/cache/yum
+
+
+RUN curl -fsSL https://rpm.nodesource.com/setup_10.x | bash - \
+    && yum install -y nodejs \
+    && node --version \
+    && npm --version
+
+# Install Node.js 10.15.3 — x86_64 binary (linux-x64)
+#RUN if [ "${TARGETARCH}" != "amd64" ]; then \
+#      echo "ERROR: This image supports only x86_64 (amd64), got: ${TARGETARCH}"; \
+#      exit 1; \
+#    fi \
+#    && curl -fsSL "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-x64.tar.xz" \
+#      | tar -xJ -C /usr/local --strip-components=1 \
+#    && node --version \
+#    && npm --version
+
+WORKDIR /app
+
+CMD ["node", "--version"]

@@ -1,0 +1,63 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: ng-build
+  labels:
+    app.kubernetes.io/part-of: sample-angular7
+spec:
+  description: Install dependencies and run ng build --prod
+  params:
+    - name: NODE_IMAGE
+      description: Node.js image used to compile the Angular app (build from cicd/Containerfile.node-ubi7)
+      type: string
+      default: image-registry.openshift-image-registry.svc:5000/sample-angular7/node-10-ubi7:10.15.3
+    - name: BUILD_COMMAND
+      description: Angular production build command
+      type: string
+      default: ./node_modules/.bin/ng build --prod
+    - name: OUTPUT_DIR
+      description: Relative path to the build output directory
+      type: string
+      default: dist/sample-angular7
+  workspaces:
+    - name: source
+      description: Workspace containing the application source code
+  steps:
+    - name: install-and-build
+      image: $(params.NODE_IMAGE)
+      workingDir: $(workspaces.source.path)
+      script: |
+        #!/usr/bin/env bash
+        set -euo pipefail
+
+        echo "Node: $(node --version)"
+        echo "npm: $(npm --version)"
+
+        if [ ! -f package-lock.json ]; then
+          echo "ERROR: package-lock.json is missing. Commit it to the repository."
+          exit 1
+        fi
+
+        LOCKFILE_VERSION=$(node -pe "require('./package-lock.json').lockfileVersion")
+        echo "package-lock.json lockfileVersion: ${LOCKFILE_VERSION}"
+        if [ "${LOCKFILE_VERSION}" -gt 1 ]; then
+          echo "ERROR: lockfileVersion ${LOCKFILE_VERSION} requires npm 7+, but Node 10.15 ships with npm 6."
+          echo "Regenerate the lockfile with: npx npm@6 install"
+          exit 1
+        fi
+
+        npm ci
+        $(params.BUILD_COMMAND)
+
+        if [ ! -d "$(params.OUTPUT_DIR)" ]; then
+          echo "Build output not found at $(params.OUTPUT_DIR)"
+          exit 1
+        fi
+
+        echo "Angular build completed: $(params.OUTPUT_DIR)"
+        ls -la "$(params.OUTPUT_DIR)"
+        echo -n "$(params.OUTPUT_DIR)" > /tekton/results/OUTPUT_DIR
+
+  results:
+    - name: OUTPUT_DIR
+      description: Path to the compiled application assets

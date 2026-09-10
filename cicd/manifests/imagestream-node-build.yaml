@@ -1,0 +1,14 @@
+apiVersion: image.openshift.io/v1
+kind: ImageStream
+metadata:
+  name: node-10-ubi7
+  labels:
+    app: node-10-ubi7
+    app.kubernetes.io/part-of: sample-angular7
+spec:
+  lookupPolicy:
+    local: true
+  tags:
+    - name: "10.15.3"
+      annotations:
+        description: Node.js 10.15.3 on RHEL 7 UBI for Angular builds

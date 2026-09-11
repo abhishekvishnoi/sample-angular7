@@ -33,7 +33,9 @@ RUN curl -fsSL https://rpm.nodesource.com/setup_10.x | bash - \
     && node --version \
     && npm --version
 
-RUN sudo chown -R 65532:0 "/.npm"
+RUN mkdir -p /.npm \
+    && chown -R 1001:0 /.npm \
+    && chmod -R g+rwX /.npm
 
 # Install Node.js 10.15.3 — x86_64 binary (linux-x64)
 #RUN if [ "${TARGETARCH}" != "amd64" ]; then \
